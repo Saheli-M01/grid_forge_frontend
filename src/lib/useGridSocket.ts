@@ -24,7 +24,7 @@ export interface GridState {
   myMultiplier: number;
   myBombs: number;
   activity: ActivityEvent[];
-  lastBombIndices: number[];   // for bomb animation
+  lastBombIndices: number[]; // for bomb animation
 }
 
 const INITIAL_STATE: GridState = {
@@ -50,9 +50,23 @@ export function useGridSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const sendMsg = useCallback((msg: ClientMessage) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    }
+  }, []);
+
   const connect = useCallback(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+    // Pass saved userId and color so server can restore the session
+    const savedUserId = localStorage.getItem("playerUserId");
+    const savedColor  = localStorage.getItem("playerColor");
+    const params = new URLSearchParams();
+    if (savedUserId) params.set("userId", savedUserId);
+    if (savedColor)  params.set("color",  savedColor);
+    const query = params.toString();
+    const url = `${protocol}://${window.location.host}/ws${query ? `?${query}` : ""}`;
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => setState((s) => ({ ...s, connected: true }));
@@ -66,11 +80,26 @@ export function useGridSocket() {
       }
 
       if (msg.type === "init") {
+        // Save userId and color for future reconnects
+        const savedUserId = localStorage.getItem("playerUserId");
+        const savedColor  = localStorage.getItem("playerColor");
+
+        // If server gave us the same userId we sent, keep our saved color
+        // (server assigns a new color when user has no cells)
+        const finalColor = (savedUserId === msg.userId && savedColor) ? savedColor : msg.color;
+
+        // Always persist current session
+        localStorage.setItem("playerUserId", msg.userId);
+        localStorage.setItem("playerColor",  finalColor);
+
+        const savedName = localStorage.getItem("playerName");
+        const finalName = savedName && savedName !== msg.name ? savedName : msg.name;
+
         setState({
           connected: true,
           userId: msg.userId,
-          myColor: msg.color,
-          myName: msg.name,
+          myColor: finalColor,
+          myName: finalName,
           grid: msg.grid,
           cols: msg.cols,
           rows: msg.rows,
@@ -83,6 +112,15 @@ export function useGridSocket() {
           activity: [],
           lastBombIndices: [],
         });
+
+        // Restore saved name if it differs from what server sent
+        if (savedName && savedName !== msg.name) {
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "rename", name: savedName }));
+            }
+          }, 100);
+        }
       } else if (msg.type === "update") {
         setState((s) => {
           const newGrid = [...s.grid];
@@ -155,12 +193,6 @@ export function useGridSocket() {
     };
   }, [connect]);
 
-  const sendMsg = useCallback((msg: ClientMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
-    }
-  }, []);
-
   const claimCell = useCallback(
     (index: number) => sendMsg({ type: "claim", index }),
     [sendMsg],
@@ -172,7 +204,11 @@ export function useGridSocket() {
   );
 
   const rename = useCallback(
-    (name: string) => sendMsg({ type: "rename", name }),
+    (name: string) => {
+      // Save to localStorage for persistence
+      localStorage.setItem("playerName", name);
+      sendMsg({ type: "rename", name });
+    },
     [sendMsg],
   );
 

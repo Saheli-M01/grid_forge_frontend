@@ -23,16 +23,18 @@ export default function Header({
   myMultiplier,
   onRename,
 }: HeaderProps) {
-  const [editing, setEditing]         = useState(false);
-  const [draft, setDraft]             = useState("");
-  const inputRef                      = useRef<HTMLInputElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset modal state
-  const [showReset, setShowReset]     = useState(false);
-  const [password, setPassword]       = useState("");
-  const [resetStatus, setResetStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg]       = useState("");
-  const passwordRef                   = useRef<HTMLInputElement>(null);
+  const [showReset, setShowReset] = useState(false);
+  const [password, setPassword] = useState("");
+  const [resetStatus, setResetStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -47,7 +49,10 @@ export default function Header({
     }
   }, [showReset]);
 
-  function startEdit() { setDraft(myName ?? ""); setEditing(true); }
+  function startEdit() {
+    setDraft(myName ?? "");
+    setEditing(true);
+  }
   function commitEdit() {
     const t = draft.trim();
     if (t && t !== myName) onRename(t);
@@ -84,7 +89,10 @@ export default function Header({
       });
       if (res.ok) {
         setResetStatus("success");
-        setTimeout(() => closeReset(), 1500);
+        // Reload page after 1.5s to get fresh grid from server
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         const data = await res.json();
         setErrorMsg(data.error ?? "Wrong password");
@@ -104,14 +112,15 @@ export default function Header({
   }
 
   const streakColor =
-    myMultiplier >= 3 ? "text-red-400" :
-    myMultiplier >= 2 ? "text-orange-400" :
-    "text-yellow-400";
+    myMultiplier >= 3
+      ? "text-red-400"
+      : myMultiplier >= 2
+        ? "text-orange-400"
+        : "text-yellow-400";
 
   return (
     <>
       <header className="flex items-center justify-between px-5 py-2.5 bg-gray-900 border-b border-gray-800 shrink-0 z-10">
-
         {/* Logo */}
         <div className="flex items-center gap-3">
           <Image
@@ -155,7 +164,9 @@ export default function Header({
 
           {/* Streak badge */}
           {myStreak >= 2 && (
-            <div className={`flex items-center gap-1 font-semibold ${streakColor}`}>
+            <div
+              className={`flex items-center gap-1 font-semibold ${streakColor}`}
+            >
               <Flame className="w-4 h-4" />
               <span>{myStreak}x streak</span>
               {myMultiplier > 1 && (
@@ -170,7 +181,6 @@ export default function Header({
 
         {/* Right: player identity + reset */}
         <div className="flex items-center gap-3">
-
           {/* Reset button */}
           <button
             onClick={openReset}
@@ -217,10 +227,11 @@ export default function Header({
       {showReset && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) closeReset(); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeReset();
+          }}
         >
           <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
-
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -237,7 +248,9 @@ export default function Header({
 
             {/* Warning */}
             <p className="text-sm text-gray-400 mb-4">
-              This will clear <span className="text-white font-medium">all cells </span> and reset everyone&apos;s scores. This cannot be undone.
+              This will clear{" "}
+              <span className="text-white font-medium">all cells </span> and
+              reset everyone&apos;s scores. This cannot be undone.
             </p>
 
             {/* Password input */}
@@ -266,7 +279,9 @@ export default function Header({
 
             {/* Success message */}
             {resetStatus === "success" && (
-              <p className="text-xs text-green-400 mb-3">✅ Grid reset successfully!</p>
+              <p className="text-xs text-green-400 mb-3">
+                ✅ Grid reset successfully!
+              </p>
             )}
 
             {/* Buttons */}
@@ -279,18 +294,26 @@ export default function Header({
               </button>
               <button
                 onClick={handleReset}
-                disabled={resetStatus === "loading" || resetStatus === "success" || !password.trim()}
+                disabled={
+                  resetStatus === "loading" ||
+                  resetStatus === "success" ||
+                  !password.trim()
+                }
                 className={`flex-1 px-3 py-2 text-sm rounded-lg font-medium transition-all ${
                   resetStatus === "loading"
                     ? "bg-red-500/50 text-red-200 cursor-wait"
                     : resetStatus === "success"
-                    ? "bg-green-500/30 text-green-300 cursor-default"
-                    : !password.trim()
-                    ? "bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700"
-                    : "bg-red-500/20 border border-red-500/60 text-red-300 hover:bg-red-500/30"
+                      ? "bg-green-500/30 text-green-300 cursor-default"
+                      : !password.trim()
+                        ? "bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700"
+                        : "bg-red-500/20 border border-red-500/60 text-red-300 hover:bg-red-500/30"
                 }`}
               >
-                {resetStatus === "loading" ? "Resetting…" : resetStatus === "success" ? "Done!" : "Reset Grid"}
+                {resetStatus === "loading"
+                  ? "Resetting…"
+                  : resetStatus === "success"
+                    ? "Done!"
+                    : "Reset Grid"}
               </button>
             </div>
           </div>

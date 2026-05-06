@@ -146,7 +146,6 @@ function getBombIndices(centerIdx: number): number[] {
   return indices;
 }
 
-
 // Bootstrap
 
 async function bootstrap() {
@@ -169,7 +168,9 @@ async function bootstrap() {
     // hard reset by admin by password endpoint
     if (req.url === "/admin/reset" && req.method === "POST") {
       let body = "";
-      req.on("data", (chunk) => { body += chunk; });
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
       req.on("end", async () => {
         try {
           const { password } = JSON.parse(body) as { password?: string };
@@ -184,7 +185,7 @@ async function bootstrap() {
           // Reset DB
           await pool.query(
             `UPDATE cells SET owner_id=NULL, owner_name=NULL, color=NULL,
-             claimed_at=NULL, locked_until=0, contest_count=0`
+             claimed_at=NULL, locked_until=0, contest_count=0`,
           );
 
           // Reset in-memory grid
@@ -236,21 +237,29 @@ async function bootstrap() {
   wss.on("connection", (ws: WebSocket, req) => {
     // Try to restore existing session from query param
     const urlParams = new URL(req.url ?? "/ws", "http://localhost");
-    const requestedId = urlParams.searchParams.get("userId") ?? "";
+    const requestedId    = urlParams.searchParams.get("userId") ?? "";
+    const requestedColor = urlParams.searchParams.get("color")  ?? "";
 
     // Check if this userId already has cells in the grid (returning player)
     const existingColor = requestedId
-      ? grid.find((c) => c.owner === requestedId)?.color ?? null
+      ? (grid.find((c) => c.owner === requestedId)?.color ?? null)
       : null;
     const existingName = requestedId
-      ? grid.find((c) => c.owner === requestedId)?.name ?? null
+      ? (grid.find((c) => c.owner === requestedId)?.name ?? null)
       : null;
 
-    // Reuse old id+color+name if valid, otherwise create fresh
-    const userId = requestedId && existingColor ? requestedId : generateId();
-    const color = existingColor ?? USER_COLORS[colorIndex % USER_COLORS.length];
+    // Always reuse the userId if client sent one (even if no cells yet — e.g. new player or post-reset)
+    const userId = requestedId || generateId();
+
+    // Color priority: cells > client-sent color > new color
+    const color = existingColor
+      ?? (requestedColor || null)
+      ?? USER_COLORS[colorIndex % USER_COLORS.length];
+
     const name = existingName ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
-    if (!existingColor) colorIndex++;
+
+    // Only increment colorIndex if we're assigning a brand new color
+    if (!existingColor && !requestedColor) colorIndex++;
 
     const user: User = {
       id: userId,
@@ -295,7 +304,7 @@ async function bootstrap() {
     //Message handler
 
     ws.on("message", (raw: Buffer) => {
-      let msg: { type: string;[key: string]: unknown };
+      let msg: { type: string; [key: string]: unknown };
       try {
         msg = JSON.parse(raw.toString());
       } catch {
@@ -330,21 +339,19 @@ async function bootstrap() {
         const previousName = cell.name;
 
         // Streak logic
-        if(previousOwner !== userId){
+        if (previousOwner !== userId) {
           const timeSinceLast = now - user.lastClaimAt;
-        if (timeSinceLast <= STREAK_RESET_MS) {
-          user.streak += 1;
-        } else {
-          user.streak = 1;
+          if (timeSinceLast <= STREAK_RESET_MS) {
+            user.streak += 1;
+          } else {
+            user.streak = 1;
+          }
+          user.lastClaimAt = now;
+          user.totalClaims += 1;
         }
-        user.lastClaimAt = now;
-        user.totalClaims += 1;
-        }
-        
+
         // Score multiplier based on streak
         const multiplier = user.streak >= 10 ? 3 : user.streak >= 5 ? 2 : 1;
-
-
 
         // Apply claim
         if (previousOwner && previousOwner !== userId) {
@@ -352,7 +359,7 @@ async function bootstrap() {
           if (prev) prev.score = Math.max(0, prev.score - 1);
         }
         if (previousOwner !== userId) {
-          user.score += multiplier; 
+          user.score += multiplier;
         }
 
         cell.owner = userId;
