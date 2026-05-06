@@ -298,17 +298,7 @@ export default function Grid({
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 w-full">
-        {/* Cooldown bar */}
-        <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${cooldownPct * 100}%`,
-              backgroundColor: myColor ?? "#3b82f6",
-              transition: cooldownPct === 0 ? "none" : "width 16ms linear",
-            }}
-          />
-        </div>
+       
 
         {/* Zoom badge */}
         {zoomDisplay > 1 && (
