@@ -1,7 +1,7 @@
 "use client";
 
 import { Thermometer, Bomb, ZoomIn } from "lucide-react";
-import type { CellState } from "./libs/types";
+import type { CellState } from "../libs/types";
 
 interface GridProps {
   grid: CellState[];
