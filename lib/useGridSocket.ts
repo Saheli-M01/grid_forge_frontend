@@ -45,6 +45,25 @@ const INITIAL_STATE: GridState = {
   lastBombIndices: [],
 };
 
+// store user name from local storage so that even after refreshing it stays intact
+const LS_KEY = "gridwar_player";
+
+function loadFromStorage(): { userId: string; name: string; color: string } | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveToStorage(userId: string, name: string, color: string) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ userId, name, color }));
+  } catch {}
+}
+
 export function useGridSocket() {
   const [state, setState] = useState<GridState>(INITIAL_STATE);
   const wsRef = useRef<WebSocket | null>(null);
@@ -52,7 +71,10 @@ export function useGridSocket() {
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+    // Pass saved userId in query param so server can restore the session
+    const saved = loadFromStorage();
+    const url = `${protocol}://${window.location.host}/ws${saved ? `?userId=${encodeURIComponent(saved.userId)}` : ""}`;
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => setState((s) => ({ ...s, connected: true }));
@@ -66,6 +88,8 @@ export function useGridSocket() {
       }
 
       if (msg.type === "init") {
+        // Persist identity so refresh restores same player
+        saveToStorage(msg.userId, msg.name, msg.color);
         setState({
           connected: true,
           userId: msg.userId,
@@ -109,6 +133,10 @@ export function useGridSocket() {
 
       } else if (msg.type === "rename") {
         setState((s) => {
+          // Update localStorage if it's our own rename
+          if (msg.userId === s.userId) {
+            saveToStorage(s.userId!, msg.name, s.myColor!);
+          }
           const newGrid = s.grid.map((cell) =>
             cell.owner === msg.userId ? { ...cell, name: msg.name } : cell
           );

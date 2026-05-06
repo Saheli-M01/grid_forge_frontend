@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
-import { Thermometer, Bomb, ZoomIn } from "lucide-react";
+import { Thermometer, ZoomIn } from "lucide-react";
 import type { CellState } from "@/lib/types";
 
 interface GridProps {
@@ -349,7 +349,7 @@ export default function Grid({
           }`}
           title={myBombs > 0 ? "Use bomb (3×3 area)" : "Earn a bomb by claiming 20 cells"}
         >
-          <Bomb className="w-3.5 h-3.5" />
+          <span className="text-base leading-none">💣</span>
           <span>{myBombs > 0 ? `×${myBombs}` : "0"}</span>
           {bombMode && <span className="text-red-400 font-bold ml-1">ARMED</span>}
         </button>

@@ -198,7 +198,7 @@ async function bootstrap() {
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (req, socket, head) => {
-    if (req.url === "/ws") {
+    if (req.url?.startsWith("/ws")) {
       wss.handleUpgrade(req, socket, head, (ws) =>
         wss.emit("connection", ws, req),
       );
@@ -207,14 +207,28 @@ async function bootstrap() {
 
   // Connection handler
 
-  wss.on("connection", (ws: WebSocket) => {
-    const userId = generateId();
-    const color = USER_COLORS[colorIndex % USER_COLORS.length];
-    colorIndex++;
+  wss.on("connection", (ws: WebSocket, req) => {
+    // Try to restore existing session from query param
+    const urlParams = new URL(req.url ?? "/ws", "http://localhost");
+    const requestedId = urlParams.searchParams.get("userId") ?? "";
+
+    // Check if this userId already has cells in the grid (returning player)
+    const existingColor = requestedId
+      ? grid.find((c) => c.owner === requestedId)?.color ?? null
+      : null;
+    const existingName = requestedId
+      ? grid.find((c) => c.owner === requestedId)?.name ?? null
+      : null;
+
+    // Reuse old id+color+name if valid, otherwise create fresh
+    const userId = requestedId && existingColor ? requestedId : generateId();
+    const color  = existingColor ?? USER_COLORS[colorIndex % USER_COLORS.length];
+    const name   = existingName  ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
+    if (!existingColor) colorIndex++;
 
     const user: User = {
       id: userId,
-      name: `Player ${userId.slice(0, 4).toUpperCase()}`,
+      name,
       color,
       score: 0,
       ws,
