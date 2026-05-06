@@ -10,8 +10,8 @@ import pool, {
   loadGrid,
   claimCell,
   renameUserCells,
-} from "./lib/db";
-import type { ActivityEvent } from "./lib/types";
+} from "./src/lib/db";
+import type { ActivityEvent } from "./src/lib/types";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const dev = process.env.NODE_ENV !== "production";

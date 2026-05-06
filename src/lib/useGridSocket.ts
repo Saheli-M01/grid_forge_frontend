@@ -24,7 +24,7 @@ export interface GridState {
   myMultiplier: number;
   myBombs: number;
   activity: ActivityEvent[];
-  lastBombIndices: number[]; // for bomb animation
+  lastBombIndices: number[];   // for bomb animation
 }
 
 const INITIAL_STATE: GridState = {

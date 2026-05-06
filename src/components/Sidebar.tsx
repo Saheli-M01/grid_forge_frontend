@@ -14,32 +14,32 @@ interface SidebarProps {
 }
 
 const SECTIONS = [
-  { id: "you",         label: "You",          minH: 72,  defaultH: 90  },
-  { id: "coverage",    label: "Map Coverage", minH: 60,  defaultH: 72  },
-  { id: "leaderboard", label: "Leaderboard",  minH: 60,  defaultH: 200 },
-  { id: "feed",        label: "Live Feed",    minH: 60,  defaultH: 160 },
-  { id: "minimap",     label: "Mini Map",     minH: 80,  defaultH: 140 },
+  { id: "you", label: "You", minH: 72, defaultH: 90 },
+  { id: "coverage", label: "Map Coverage", minH: 60, defaultH: 72 },
+  { id: "leaderboard", label: "Leaderboard", minH: 60, defaultH: 200 },
+  { id: "feed", label: "Live Feed", minH: 60, defaultH: 160 },
+  { id: "minimap", label: "Mini Map", minH: 80, defaultH: 140 },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
 function RankIcon({ rank }: { rank: number }) {
   if (rank === 0) return <Trophy className="w-3.5 h-3.5 text-yellow-400" />;
-  if (rank === 1) return <Medal  className="w-3.5 h-3.5 text-gray-300"   />;
-  if (rank === 2) return <Award  className="w-3.5 h-3.5 text-amber-600"  />;
+  if (rank === 1) return <Medal className="w-3.5 h-3.5 text-gray-300" />;
+  if (rank === 2) return <Award className="w-3.5 h-3.5 text-amber-600" />;
   return <span className="text-xs text-gray-600 w-3.5 text-center">{rank + 1}</span>;
 }
 
 export default function Sidebar({ leaderboard, userId, grid, cols, rows, activity }: SidebarProps) {
-  const totalCells   = cols * rows;
+  const totalCells = cols * rows;
   const claimedCells = grid.filter((c) => c.owner !== null).length;
-  const claimedPct   = totalCells > 0 ? (claimedCells / totalCells) * 100 : 0;
+  const claimedPct = totalCells > 0 ? (claimedCells / totalCells) * 100 : 0;
 
   const myEntry = useMemo(() => leaderboard.find((e) => e.id === userId), [leaderboard, userId]);
-  const myRank  = useMemo(() => leaderboard.findIndex((e) => e.id === userId) + 1, [leaderboard, userId]);
+  const myRank = useMemo(() => leaderboard.findIndex((e) => e.id === userId) + 1, [leaderboard, userId]);
 
   const [heights, setHeights] = useState<Record<SectionId, number>>(() =>
-    Object.fromEntries(SECTIONS.map((s) => [s.id, s.defaultH])) as Record<SectionId, number>
+    Object.fromEntries(SECTIONS.map((s) => [s.id, s.defaultH])) as Record<SectionId, number>,
   );
 
   const dragging = useRef<{ sectionId: SectionId; startY: number; startH: number } | null>(null);
@@ -54,7 +54,7 @@ export default function Sidebar({ leaderboard, userId, grid, cols, rows, activit
       if (!dragging.current) return;
       const { sectionId, startY, startH } = dragging.current;
       const delta = e.clientY - startY;
-      const minH  = SECTIONS.find((s) => s.id === sectionId)!.minH;
+      const minH = SECTIONS.find((s) => s.id === sectionId)!.minH;
       setHeights((prev) => ({ ...prev, [sectionId]: Math.max(minH, startH + delta) }));
     }
     function onMouseUp() { dragging.current = null; }
@@ -135,7 +135,7 @@ export default function Sidebar({ leaderboard, userId, grid, cols, rows, activit
                 </span>
                 <div className="flex items-center gap-1 shrink-0">
                   {entry.streak >= 3 && <Flame className="w-3 h-3 text-orange-400" />}
-                  {entry.bombs > 0   && <Bomb  className="w-3 h-3 text-yellow-400" />}
+                  {entry.bombs > 0 && <Bomb className="w-3 h-3 text-yellow-400" />}
                   <span className="text-sm font-semibold text-white">{entry.score}</span>
                 </div>
               </li>
