@@ -82,6 +82,10 @@ export type ServerMessage =
       type: "protected";
       index: number;
       lockedUntil: number;
+    }
+  | {
+      type: "reset";
+      grid: CellState[];
     };
 
 export type ClientMessage =

@@ -146,35 +146,6 @@ function getBombIndices(centerIdx: number): number[] {
   return indices;
 }
 
-/** Apply a claim to a single cell, updating scores. Returns previous owner id. */
-function applyClaimToCell(
-  index: number,
-  user: User,
-  now: number,
-  isProtected: boolean,
-): string | null {
-  const cell = grid[index];
-  const previousOwner = cell.owner;
-
-  if (isProtected) return null; // skip locked cells
-
-  if (previousOwner && previousOwner !== user.id) {
-    const prev = users.get(previousOwner);
-    if (prev) prev.score = Math.max(0, prev.score - 1);
-  }
-  if (previousOwner !== user.id) {
-    user.score += 1;
-  }
-
-  cell.owner = user.id;
-  cell.color = user.color;
-  cell.name = user.name;
-  cell.claimedAt = now;
-  cell.lockedUntil = now + LOCK_DURATION_MS;
-  cell.contestCount += 1;
-
-  return previousOwner;
-}
 
 // Bootstrap
 
@@ -194,11 +165,66 @@ async function bootstrap() {
 
   await app.prepare();
 
-  const httpServer = createServer((req, res) => handle(req, res));
+  const httpServer = createServer((req, res) => {
+    // hard reset by admin by password endpoint
+    if (req.url === "/admin/reset" && req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk) => { body += chunk; });
+      req.on("end", async () => {
+        try {
+          const { password } = JSON.parse(body) as { password?: string };
+          const secret = process.env.ADMIN_SECRET;
+
+          if (!secret || password !== secret) {
+            res.writeHead(401, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Wrong password" }));
+            return;
+          }
+
+          // Reset DB
+          await pool.query(
+            `UPDATE cells SET owner_id=NULL, owner_name=NULL, color=NULL,
+             claimed_at=NULL, locked_until=0, contest_count=0`
+          );
+
+          // Reset in-memory grid
+          for (const cell of grid) {
+            cell.owner = null;
+            cell.color = null;
+            cell.name = null;
+            cell.claimedAt = null;
+            cell.lockedUntil = 0;
+            cell.contestCount = 0;
+          }
+
+          // Reset all user scores/streaks/bombs
+          for (const user of users.values()) {
+            user.score = 0;
+            user.streak = 0;
+            user.bombs = 0;
+            user.totalClaims = 0;
+          }
+
+          // Broadcast reset to all connected clients
+          broadcastAll({ type: "reset", grid });
+
+          console.log("[admin] grid reset by admin");
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        } catch {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Server error" }));
+        }
+      });
+      return;
+    }
+
+    handle(req, res);
+  });
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (req, socket, head) => {
-    if (req.url === "/ws") {
+    if (req.url?.startsWith("/ws")) {
       wss.handleUpgrade(req, socket, head, (ws) =>
         wss.emit("connection", ws, req),
       );
@@ -207,14 +233,28 @@ async function bootstrap() {
 
   // Connection handler
 
-  wss.on("connection", (ws: WebSocket) => {
-    const userId = generateId();
-    const color = USER_COLORS[colorIndex % USER_COLORS.length];
-    colorIndex++;
+  wss.on("connection", (ws: WebSocket, req) => {
+    // Try to restore existing session from query param
+    const urlParams = new URL(req.url ?? "/ws", "http://localhost");
+    const requestedId = urlParams.searchParams.get("userId") ?? "";
+
+    // Check if this userId already has cells in the grid (returning player)
+    const existingColor = requestedId
+      ? grid.find((c) => c.owner === requestedId)?.color ?? null
+      : null;
+    const existingName = requestedId
+      ? grid.find((c) => c.owner === requestedId)?.name ?? null
+      : null;
+
+    // Reuse old id+color+name if valid, otherwise create fresh
+    const userId = requestedId && existingColor ? requestedId : generateId();
+    const color  = existingColor ?? USER_COLORS[colorIndex % USER_COLORS.length];
+    const name   = existingName  ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
+    if (!existingColor) colorIndex++;
 
     const user: User = {
       id: userId,
-      name: `Player ${userId.slice(0, 4).toUpperCase()}`,
+      name,
       color,
       score: 0,
       ws,
