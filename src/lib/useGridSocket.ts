@@ -24,7 +24,7 @@ export interface GridState {
   myMultiplier: number;
   myBombs: number;
   activity: ActivityEvent[];
-  lastBombIndices: number[];   // for bomb animation
+  lastBombIndices: number[]; // for bomb animation
 }
 
 const INITIAL_STATE: GridState = {
@@ -172,9 +172,22 @@ export function useGridSocket() {
   );
 
   const rename = useCallback(
-    (name: string) => sendMsg({ type: "rename", name }),
+    (name: string) => {
+      // Save to localStorage for persistence
+      localStorage.setItem("playerName", name);
+      sendMsg({ type: "rename", name });
+    },
     [sendMsg],
   );
+
+  // Load saved username from localStorage on mount
+  useEffect(() => {
+    const savedName = localStorage.getItem("playerName");
+    if (savedName) {
+      // Will be used when renaming is supported on init
+      // For now, just load it for future use
+    }
+  }, []);
 
   return { state, claimCell, useBomb, rename };
 }
