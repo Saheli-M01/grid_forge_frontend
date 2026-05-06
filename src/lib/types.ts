@@ -3,9 +3,10 @@ export interface CellState {
   color: string | null;
   name: string | null;
   claimedAt: number | null;
-  lockedUntil: number | null; // protected for a particular time N ms after claim
-  contestCount: number; // how many times the cell changed
+  lockedUntil: number | null;   // protected for N ms after claim
+  contestCount: number;          // how many times this cell changed hands (heatmap)
 }
+
 export interface LeaderboardEntry {
   id: string;
   name: string;
@@ -16,10 +17,10 @@ export interface LeaderboardEntry {
 }
 
 export interface ActivityEvent {
-  actorId: string; // stable id ->  used to resolve current name
-  actorName: string; // name at time of event (fallback)
+  actorId: string;             // stable id — used to resolve current name
+  actorName: string;           // name at time of event (fallback)
   actorColor: string;
-  victimName: string | null; // null -> unclaimed cell
+  victimName: string | null;   // null = unclaimed cell
   index: number;
   ts: number;
   isBomb: boolean;
@@ -41,7 +42,7 @@ export type ServerMessage =
     }
   | {
       type: "update";
-      indices: number[]; // array — bomb can update multiple cells
+      indices: number[];          // array — bomb can update multiple cells
       cells: CellState[];
       owner: string;
       color: string;
