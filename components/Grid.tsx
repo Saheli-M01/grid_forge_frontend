@@ -14,7 +14,7 @@ interface GridProps {
   myBombs: number;
   lastBombIndices: number[];
   onCellClick: (index: number, isBomb: boolean) => void;
-  onCellHover: (cell: CellState | null, x: number, y: number) => void;
+  onCellHover: (index: number | null, x: number, y: number) => void;
 }
 
 const FLASH_DURATION = 600;
@@ -256,7 +256,7 @@ export default function Grid({
     const col   = Math.floor((cx - pan.x) / cellW);
     const row   = Math.floor((cy - pan.y) / cellH);
     if (col >= 0 && col < cols && row >= 0 && row < rows) {
-      onCellHover(grid[row * cols + col], e.clientX, e.clientY);
+      onCellHover(row * cols + col, e.clientX, e.clientY);
     } else {
       onCellHover(null, 0, 0);
     }
@@ -298,17 +298,7 @@ export default function Grid({
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 w-full">
-        {/* Cooldown bar */}
-        <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${cooldownPct * 100}%`,
-              backgroundColor: myColor ?? "#3b82f6",
-              transition: cooldownPct === 0 ? "none" : "width 16ms linear",
-            }}
-          />
-        </div>
+       
 
         {/* Zoom badge */}
         {zoomDisplay > 1 && (

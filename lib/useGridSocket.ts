@@ -88,13 +88,18 @@ export function useGridSocket() {
       }
 
       if (msg.type === "init") {
-        // Persist identity so refresh restores same player
-        saveToStorage(msg.userId, msg.name, msg.color);
+        // Check if user had a saved name before this session
+        const saved = loadFromStorage();
+        const savedName = saved?.name;
+
+        // Save new session identity (color + userId), but keep saved name if exists
+        saveToStorage(msg.userId, savedName ?? msg.name, msg.color);
+
         setState({
           connected: true,
           userId: msg.userId,
           myColor: msg.color,
-          myName: msg.name,
+          myName: savedName ?? msg.name,
           grid: msg.grid,
           cols: msg.cols,
           rows: msg.rows,
@@ -107,6 +112,15 @@ export function useGridSocket() {
           activity: [],
           lastBombIndices: [],
         });
+
+        // If saved name differs from server-assigned name, restore it
+        if (savedName && savedName !== msg.name) {
+          setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "rename", name: savedName }));
+            }
+          }, 100);
+        }
 
       } else if (msg.type === "update") {
         setState((s) => {
@@ -134,6 +148,7 @@ export function useGridSocket() {
       } else if (msg.type === "rename") {
         setState((s) => {
           // Update localStorage if it's our own rename
+          
           if (msg.userId === s.userId) {
             saveToStorage(s.userId!, msg.name, s.myColor!);
           }
