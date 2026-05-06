@@ -248,8 +248,8 @@ async function bootstrap() {
 
     // Reuse old id+color+name if valid, otherwise create fresh
     const userId = requestedId && existingColor ? requestedId : generateId();
-    const color  = existingColor ?? USER_COLORS[colorIndex % USER_COLORS.length];
-    const name   = existingName  ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
+    const color = existingColor ?? USER_COLORS[colorIndex % USER_COLORS.length];
+    const name = existingName ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
     if (!existingColor) colorIndex++;
 
     const user: User = {
@@ -295,7 +295,7 @@ async function bootstrap() {
     //Message handler
 
     ws.on("message", (raw: Buffer) => {
-      let msg: { type: string; [key: string]: unknown };
+      let msg: { type: string;[key: string]: unknown };
       try {
         msg = JSON.parse(raw.toString());
       } catch {
@@ -326,9 +326,12 @@ async function bootstrap() {
         }
 
         user.lastAction = now;
+        const previousOwner = cell.owner;
+        const previousName = cell.name;
 
         // Streak logic
-        const timeSinceLast = now - user.lastClaimAt;
+        if(previousOwner !== userId){
+          const timeSinceLast = now - user.lastClaimAt;
         if (timeSinceLast <= STREAK_RESET_MS) {
           user.streak += 1;
         } else {
@@ -336,12 +339,12 @@ async function bootstrap() {
         }
         user.lastClaimAt = now;
         user.totalClaims += 1;
-
+        }
+        
         // Score multiplier based on streak
         const multiplier = user.streak >= 10 ? 3 : user.streak >= 5 ? 2 : 1;
 
-        const previousOwner = cell.owner;
-        const previousName = cell.name;
+
 
         // Apply claim
         if (previousOwner && previousOwner !== userId) {
@@ -349,7 +352,7 @@ async function bootstrap() {
           if (prev) prev.score = Math.max(0, prev.score - 1);
         }
         if (previousOwner !== userId) {
-          user.score += multiplier; // streak multiplier!
+          user.score += multiplier; 
         }
 
         cell.owner = userId;
