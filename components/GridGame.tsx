@@ -11,7 +11,7 @@ import type { CellState } from "@/lib/types";
 
 export default function GridGame() {
   const { state, claimCell, useBomb, rename } = useGridSocket();
-  const [tooltip, setTooltip] = useState<{ cell: CellState; x: number; y: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{ index: number; x: number; y: number } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [streakVisible, setStreakVisible] = useState(false);
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,13 +36,13 @@ export default function GridGame() {
   );
 
   const handleCellHover = useCallback(
-    (cell: CellState | null, x: number, y: number) => {
+    (index: number | null, x: number, y: number) => {
       if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
-      if (!cell) {
+      if (index === null) {
         tooltipTimer.current = setTimeout(() => setTooltip(null), 80);
         return;
       }
-      setTooltip({ cell, x, y });
+      setTooltip({ index, x, y });
     },
     []
   );
@@ -94,10 +94,10 @@ export default function GridGame() {
 
       {tooltip && (
         <Tooltip
-          cell={tooltip.cell}
+          cell={state.grid[tooltip.index]}
           x={tooltip.x}
           y={tooltip.y}
-          isOwn={tooltip.cell.owner === state.userId}
+          isOwn={state.grid[tooltip.index].owner === state.userId}
         />
       )}
 

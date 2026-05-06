@@ -14,7 +14,7 @@ interface GridProps {
   myBombs: number;
   lastBombIndices: number[];
   onCellClick: (index: number, isBomb: boolean) => void;
-  onCellHover: (cell: CellState | null, x: number, y: number) => void;
+  onCellHover: (index: number | null, x: number, y: number) => void;
 }
 
 const FLASH_DURATION = 600;
@@ -256,7 +256,7 @@ export default function Grid({
     const col   = Math.floor((cx - pan.x) / cellW);
     const row   = Math.floor((cy - pan.y) / cellH);
     if (col >= 0 && col < cols && row >= 0 && row < rows) {
-      onCellHover(grid[row * cols + col], e.clientX, e.clientY);
+      onCellHover(row * cols + col, e.clientX, e.clientY);
     } else {
       onCellHover(null, 0, 0);
     }
