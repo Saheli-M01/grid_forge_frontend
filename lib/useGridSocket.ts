@@ -171,6 +171,18 @@ export function useGridSocket() {
           ...s,
           activity: [...(msg.events ?? []), ...s.activity].slice(0, 20),
         }));
+
+      } else if (msg.type === "reset") {
+        setState((s) => ({
+          ...s,
+          grid: msg.grid,
+          leaderboard: [],
+          myStreak: 0,
+          myMultiplier: 1,
+          myBombs: 0,
+          activity: [],
+          lastBombIndices: [],
+        }));
       }
     };
 
