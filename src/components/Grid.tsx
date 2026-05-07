@@ -399,7 +399,7 @@ export default function Grid({
           title={
             myBombs > 0
               ? "Use bomb (3×3 area)"
-              : "Earn a bomb by claiming 20 cells"
+              : "Earn a bomb by claiming 5 cells"
           }
         >
           <span className="text-base leading-none">💣</span>
