@@ -60,10 +60,10 @@ export function useGridSocket() {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     // Pass saved userId and color so server can restore the session
     const savedUserId = localStorage.getItem("playerUserId");
-    const savedColor  = localStorage.getItem("playerColor");
+    const savedColor = localStorage.getItem("playerColor");
     const params = new URLSearchParams();
     if (savedUserId) params.set("userId", savedUserId);
-    if (savedColor)  params.set("color",  savedColor);
+    if (savedColor) params.set("color", savedColor);
     const query = params.toString();
     const url = `${protocol}://${window.location.host}/ws${query ? `?${query}` : ""}`;
     const ws = new WebSocket(url);
@@ -82,18 +82,20 @@ export function useGridSocket() {
       if (msg.type === "init") {
         // Save userId and color for future reconnects
         const savedUserId = localStorage.getItem("playerUserId");
-        const savedColor  = localStorage.getItem("playerColor");
+        const savedColor = localStorage.getItem("playerColor");
 
         // If server gave us the same userId we sent, keep our saved color
         // (server assigns a new color when user has no cells)
-        const finalColor = (savedUserId === msg.userId && savedColor) ? savedColor : msg.color;
+        const finalColor =
+          savedUserId === msg.userId && savedColor ? savedColor : msg.color;
 
         // Always persist current session
         localStorage.setItem("playerUserId", msg.userId);
-        localStorage.setItem("playerColor",  finalColor);
+        localStorage.setItem("playerColor", finalColor);
 
         const savedName = localStorage.getItem("playerName");
-        const finalName = savedName && savedName !== msg.name ? savedName : msg.name;
+        const finalName =
+          savedName && savedName !== msg.name ? savedName : msg.name;
 
         setState({
           connected: true,
@@ -197,7 +199,10 @@ export function useGridSocket() {
     (index: number) => sendMsg({ type: "claim", index }),
     [sendMsg],
   );
-
+  const unclaimCell = useCallback(
+    (index: number) => sendMsg({ type: "unclaim", index }),
+    [sendMsg],
+  );
   const useBomb = useCallback(
     (index: number) => sendMsg({ type: "bomb", index }),
     [sendMsg],
@@ -205,12 +210,12 @@ export function useGridSocket() {
 
   const rename = useCallback(
     (name: string) => {
-      // Save to localStorage for persistence
+      // save to localStorage for persistence
       localStorage.setItem("playerName", name);
       sendMsg({ type: "rename", name });
     },
     [sendMsg],
   );
 
-  return { state, claimCell, useBomb, rename };
+  return { state, claimCell, unclaimCell, useBomb, rename };
 }

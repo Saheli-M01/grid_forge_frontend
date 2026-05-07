@@ -9,6 +9,7 @@ import pool, {
   initSchema,
   loadGrid,
   claimCell,
+  clearCell,
   renameUserCells,
 } from "./src/lib/db";
 import type { ActivityEvent } from "./src/lib/types";
@@ -24,9 +25,9 @@ const GRID_COLS = 40;
 const GRID_ROWS = 30;
 const TOTAL_CELLS = GRID_COLS * GRID_ROWS;
 const COOLDOWN_MS = 500;
-const LOCK_DURATION_MS = 10_000; // cell protected for 10s after claim
+const LOCK_DURATION_MS = 5_000; // cell protected for 5s after claim
 const STREAK_RESET_MS = 3_000; // streak resets if no claim within 3s
-const BOMB_EVERY_N = 20; // earn a bomb every 20 claims
+const BOMB_EVERY_N = 10; // earn a bomb every 20 claims
 const BOMB_RADIUS = 1; // 3×3 area (radius 1 = 1 cell in each dir)
 const ACTIVITY_MAX = 20; // keep last 20 events in feed
 
@@ -232,13 +233,38 @@ async function bootstrap() {
     }
   });
 
+  // Heartbeat — ping all clients every 30s, drop dead connections
+  const HEARTBEAT_INTERVAL = 20_000;
+  const HEARTBEAT_TIMEOUT = 10_000;
+
+  setInterval(() => {
+    for (const [uid, user] of users) {
+      if (user.ws.readyState !== WebSocket.OPEN) {
+        users.delete(uid);
+        continue;
+      }
+      // Mark as waiting for pong
+      (user.ws as WebSocket & { _alive?: boolean })._alive = false;
+      user.ws.ping();
+
+      // If no pong within timeout, terminate
+      setTimeout(() => {
+        const alive = (user.ws as WebSocket & { _alive?: boolean })._alive;
+        if (alive === false && user.ws.readyState === WebSocket.OPEN) {
+          console.log(`[ws] terminating dead connection for ${uid}`);
+          user.ws.terminate();
+        }
+      }, HEARTBEAT_TIMEOUT);
+    }
+  }, HEARTBEAT_INTERVAL);
+
   // Connection handler
 
   wss.on("connection", (ws: WebSocket, req) => {
     // Try to restore existing session from query param
     const urlParams = new URL(req.url ?? "/ws", "http://localhost");
-    const requestedId    = urlParams.searchParams.get("userId") ?? "";
-    const requestedColor = urlParams.searchParams.get("color")  ?? "";
+    const requestedId = urlParams.searchParams.get("userId") ?? "";
+    const requestedColor = urlParams.searchParams.get("color") ?? "";
 
     // Check if this userId already has cells in the grid (returning player)
     const existingColor = requestedId
@@ -252,9 +278,10 @@ async function bootstrap() {
     const userId = requestedId || generateId();
 
     // Color priority: cells > client-sent color > new color
-    const color = existingColor
-      ?? (requestedColor || null)
-      ?? USER_COLORS[colorIndex % USER_COLORS.length];
+    const color =
+      existingColor ??
+      (requestedColor || null) ??
+      USER_COLORS[colorIndex % USER_COLORS.length];
 
     const name = existingName ?? `Player ${userId.slice(0, 4).toUpperCase()}`;
 
@@ -275,6 +302,11 @@ async function bootstrap() {
     };
     users.set(userId, user);
     rebuildScores();
+
+    // Mark connection alive on pong
+    ws.on("pong", () => {
+      (ws as WebSocket & { _alive?: boolean })._alive = true;
+    });
 
     send(ws, {
       type: "init",
@@ -310,7 +342,59 @@ async function bootstrap() {
       } catch {
         return;
       }
+      // unclaim
+      if (msg.type === "unclaim") {
+        const index = Number(msg.index);
+        if (index < 0 || index >= TOTAL_CELLS || isNaN(index)) return;
 
+        const now = Date.now();
+
+        const cell = grid[index];
+        if (cell.owner !== userId) return;
+
+        user.lastAction = now;
+        user.streak = Math.max(0, user.streak - 1);
+        user.score = Math.max(0, user.score - 1);
+
+        cell.owner = null;
+        cell.color = null;
+        cell.name = null;
+        cell.claimedAt = null;
+        cell.lockedUntil = 0;
+
+        clearCell(index).catch((err) =>
+          console.error("[db] clearCell error:", err.message),
+        );
+
+        const event: ActivityEvent = {
+          action: "release",
+          actorId: userId,
+          actorName: user.name,
+          actorColor: user.color,
+          victimName: null,
+          index,
+          ts: now,
+          isBomb: false,
+        };
+
+        pushActivity(event);
+
+        broadcastAll({
+          type: "update",
+          indices: [index],
+          cells: [cell],
+          owner: null,
+          color: null,
+          name: null,
+          leaderboard: getLeaderboard(),
+          isBomb: false,
+        });
+
+        broadcastAll({ type: "activity", events: [event] });
+        const multiplier = user.streak >= 10 ? 3 : user.streak >= 5 ? 2 : 1;
+        send(ws, { type: "streak", streak: user.streak, multiplier });
+        return;
+      }
       //claim
       if (msg.type === "claim") {
         const index = Number(msg.index);
@@ -378,6 +462,7 @@ async function bootstrap() {
 
         // Activity feed
         const event: ActivityEvent = {
+          action: "claim",
           actorId: userId,
           actorName: user.name,
           actorColor: user.color,
@@ -470,6 +555,7 @@ async function bootstrap() {
         }
 
         const event: ActivityEvent = {
+          action: "bomb",
           actorId: userId,
           actorName: user.name,
           actorColor: user.color,

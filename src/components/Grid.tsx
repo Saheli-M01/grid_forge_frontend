@@ -93,9 +93,11 @@ export default function Grid({
 
   function heatColor(count: number): string {
     const t = Math.min(count / 20, 1);
-    return `rgb(${Math.round(30 + t * 225)},${Math.round(100 - t * 80)},${Math.round(200 - t * 180)})`;
+    const hue = 200 - t * 160;
+    const saturation = 95;
+    const lightness = 18 + t * 38;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
-
   function clampPan(
     px: number,
     py: number,
@@ -444,7 +446,28 @@ export default function Grid({
           <span className="ml-2 text-gray-700">· scroll to zoom in</span>
         )}
         {viewMode === "heatmap" && (
-          <span className="ml-2 text-orange-500/70">· heatmap on</span>
+          <span className="ml-2 inline-flex items-center gap-2 text-orange-500/70">
+            · heatmap on
+            <span className="inline-flex items-center gap-1">
+              <span
+                className="w-3 h-3 rounded-sm border border-white/10"
+                style={{ backgroundColor: heatColor(0) }}
+              />
+              <span
+                className="w-3 h-3 rounded-sm border border-white/10"
+                style={{ backgroundColor: heatColor(6) }}
+              />
+              <span
+                className="w-3 h-3 rounded-sm border border-white/10"
+                style={{ backgroundColor: heatColor(12) }}
+              />
+              <span
+                className="w-3 h-3 rounded-sm border border-white/10"
+                style={{ backgroundColor: heatColor(20) }}
+              />
+              <span className="text-[10px] text-gray-500">low → hot</span>
+            </span>
+          </span>
         )}
       </p>
     </div>

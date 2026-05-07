@@ -104,6 +104,19 @@ export async function claimCell(
   );
 }
 
+export async function clearCell(idx: number): Promise<void> {
+  await pool.query(
+    `UPDATE cells
+      SET owner_id = NULL,
+            owner_name = NULL,
+            color = NULL,
+            claimed_at = NULL,
+            locked_until = 0
+      WHERE idx = $1`,
+    [idx],
+  );
+}
+
 export async function renameUserCells(
   ownerId: string,
   newName: string,

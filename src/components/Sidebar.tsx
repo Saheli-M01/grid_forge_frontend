@@ -151,9 +151,13 @@ export default function Sidebar({ leaderboard, userId, grid, cols, rows, activit
               <div key={i} className="flex items-start gap-1.5 text-xs">
                 <div className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: e.actorColor }} />
                 <p className="text-gray-400 leading-tight">
-                  {e.isBomb && <Bomb className="w-3 h-3 inline mr-1 text-orange-400" />}
+                  {e.action === "bomb" && <Bomb className="w-3 h-3 inline mr-1 text-orange-400" />}
                   <span className="text-white font-medium">{e.actorName}</span>
-                  {e.victimName ? (
+                  {e.action === "release" ? (
+                    <span className="text-emerald-400"> unclaimed a cell</span>
+                  ) : e.action === "bomb" ? (
+                    <span className="text-orange-300"> used a bomb</span>
+                  ) : e.victimName ? (
                     <>
                       <Swords className="w-3 h-3 inline mx-1 text-red-400" />
                       <span className="text-red-400">{e.victimName}</span>

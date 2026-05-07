@@ -10,8 +10,12 @@ import StreakToast from "./StreakToast";
 import type { CellState } from "@/lib/types";
 
 export default function GridGame() {
-  const { state, claimCell, useBomb, rename } = useGridSocket();
-  const [tooltip, setTooltip] = useState<{ index: number; x: number; y: number } | null>(null);
+  const { state, claimCell, unclaimCell, useBomb, rename } = useGridSocket();
+  const [tooltip, setTooltip] = useState<{
+    index: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [streakVisible, setStreakVisible] = useState(false);
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -29,10 +33,20 @@ export default function GridGame() {
 
   const handleCellClick = useCallback(
     (index: number, isBomb: boolean) => {
-      if (isBomb) useBomb(index);
-      else claimCell(index);
+      if (isBomb) {
+        useBomb(index);
+        return;
+      }
+
+      const clickedCell = state.grid[index];
+      if (clickedCell?.owner === state.userId) {
+        unclaimCell(index);
+        return;
+      }
+
+      claimCell(index);
     },
-    [claimCell, useBomb]
+    [state.grid, state.userId, claimCell, unclaimCell, useBomb],
   );
 
   const handleCellHover = useCallback(
@@ -44,7 +58,7 @@ export default function GridGame() {
       }
       setTooltip({ index, x, y });
     },
-    []
+    [],
   );
 
   return (
