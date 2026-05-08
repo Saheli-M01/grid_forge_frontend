@@ -21,7 +21,18 @@ const FLASH_DURATION = 600;
 const BOMB_FLASH_DURATION = 900;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
-const DISPLAY_ASPECT = 2.5;
+
+// Responsive aspect ratio: portrait on mobile, landscape on desktop
+function getDisplayAspect(): number {
+  if (typeof window === "undefined") return 2.5;
+  const width = window.innerWidth;
+  // Mobile (< 768px): closer to square (1.2:1)
+  // Tablet (768px - 1024px): intermediate (1.6:1)
+  // Desktop (> 1024px): landscape (2.5:1)
+  if (width < 768) return 1.2;
+  if (width < 1024) return 1.6;
+  return 2.5;
+}
 
 type ViewMode = "normal" | "heatmap";
 
@@ -208,18 +219,19 @@ export default function Grid({
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [draw]);
 
-  // Canvas sizing — wide rectangle
+  // Canvas sizing — responsive rectangle
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
     const observer = new ResizeObserver(() => {
       const { width, height } = container.getBoundingClientRect();
+      const aspect = getDisplayAspect();
       let w = width;
-      let h = w / DISPLAY_ASPECT;
+      let h = w / aspect;
       if (h > height) {
         h = height;
-        w = h * DISPLAY_ASPECT;
+        w = h * aspect;
       }
       canvas.width = Math.floor(w);
       canvas.height = Math.floor(h);
@@ -235,6 +247,41 @@ export default function Grid({
     });
     observer.observe(container);
     return () => observer.disconnect();
+  }, []);
+
+  // Handle window resize for orientation changes
+  useEffect(() => {
+    const handleResize = () => {
+      const container = containerRef.current;
+      const canvas = canvasRef.current;
+      if (!container || !canvas) return;
+      const { width, height } = container.getBoundingClientRect();
+      const aspect = getDisplayAspect();
+      let w = width;
+      let h = w / aspect;
+      if (h > height) {
+        h = height;
+        w = h * aspect;
+      }
+      canvas.width = Math.floor(w);
+      canvas.height = Math.floor(h);
+      canvas.style.width = `${Math.floor(w)}px`;
+      canvas.style.height = `${Math.floor(h)}px`;
+      panRef.current = clampPan(
+        panRef.current.x,
+        panRef.current.y,
+        zoomRef.current,
+        Math.floor(w),
+        Math.floor(h),
+      );
+    };
+    
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
   }, []);
 
   // Wheel → zoom
@@ -354,12 +401,12 @@ export default function Grid({
   return (
     <div className="flex flex-col items-center gap-2 w-full h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 w-full">
+      <div className="flex items-center gap-1.5 sm:gap-3 w-full flex-wrap">
         {/* Zoom badge */}
         {zoomDisplay > 1 && (
           <button
             onClick={handleDblClick}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-gray-800 border border-gray-700 text-gray-400 hover:text-white transition-colors shrink-0"
             title="Click to reset zoom"
           >
             <ZoomIn className="w-3 h-3" />
@@ -372,16 +419,19 @@ export default function Grid({
           onClick={() =>
             setViewMode((v) => (v === "normal" ? "heatmap" : "normal"))
           }
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-all ${
+          className={`flex items-center gap-1 sm:gap-1.5 text-xs px-2 sm:px-2.5 py-1 rounded-md border transition-all shrink-0 ${
             viewMode === "heatmap"
               ? "bg-orange-500/20 border-orange-500/50 text-orange-300"
               : "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
           }`}
           title="Toggle heatmap view"
         >
-          <Thermometer className="w-3.5 h-3.5" />
+          <Thermometer className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           <span className="hidden sm:inline">
             {viewMode === "heatmap" ? "Heatmap" : "Normal"}
+          </span>
+          <span className="sm:hidden">
+            {viewMode === "heatmap" ? "HM" : "N"}
           </span>
         </button>
 
@@ -389,7 +439,7 @@ export default function Grid({
         <button
           onClick={() => myBombs > 0 && setBombMode((b) => !b)}
           disabled={myBombs === 0}
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border transition-all ${
+          className={`flex items-center gap-1 text-xs px-2 sm:px-2.5 py-1 rounded-md border transition-all shrink-0 ${
             bombMode
               ? "bg-red-500/20 border-red-500/60 text-red-300 animate-pulse"
               : myBombs > 0
@@ -399,13 +449,13 @@ export default function Grid({
           title={
             myBombs > 0
               ? "Use bomb (3×3 area)"
-              : "Earn a bomb by claiming 20 cells"
+              : "Earn a bomb by claiming 5 cells"
           }
         >
           <span className="text-base leading-none">💣</span>
           <span>{myBombs > 0 ? `×${myBombs}` : "0"}</span>
           {bombMode && (
-            <span className="text-red-400 font-bold ml-1">ARMED</span>
+            <span className="text-red-400 font-bold ml-0.5 sm:ml-1 text-xs hidden sm:inline">ARMED</span>
           )}
         </button>
       </div>
@@ -435,37 +485,37 @@ export default function Grid({
       </div>
 
       {/* Footer */}
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-gray-600 text-center px-2">
         {cols} × {rows} · {grid.filter((c) => c.owner !== null).length}/
         {grid.length} claimed
         {zoomDisplay > 1 ? (
-          <span className="ml-2 text-blue-500/60">
-            · scroll to zoom · drag to pan · dbl-click to reset
+          <span className="block sm:inline ml-0 sm:ml-2 text-blue-500/60">
+            scroll to zoom · drag to pan · dbl-click to reset
           </span>
         ) : (
-          <span className="ml-2 text-gray-700">· scroll to zoom in</span>
+          <span className="block sm:inline ml-0 sm:ml-2 text-gray-700">scroll to zoom</span>
         )}
         {viewMode === "heatmap" && (
-          <span className="ml-2 inline-flex items-center gap-2 text-orange-500/70">
-            · heatmap on
+          <span className="block sm:inline ml-0 sm:ml-2 inline-flex items-center gap-2 text-orange-500/70 justify-center sm:justify-start flex-wrap mt-1 sm:mt-0">
+            heatmap on
             <span className="inline-flex items-center gap-1">
               <span
-                className="w-3 h-3 rounded-sm border border-white/10"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-white/10"
                 style={{ backgroundColor: heatColor(0) }}
               />
               <span
-                className="w-3 h-3 rounded-sm border border-white/10"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-white/10"
                 style={{ backgroundColor: heatColor(6) }}
               />
               <span
-                className="w-3 h-3 rounded-sm border border-white/10"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-white/10"
                 style={{ backgroundColor: heatColor(12) }}
               />
               <span
-                className="w-3 h-3 rounded-sm border border-white/10"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-white/10"
                 style={{ backgroundColor: heatColor(20) }}
               />
-              <span className="text-[10px] text-gray-500">low → hot</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-500">low → hot</span>
             </span>
           </span>
         )}

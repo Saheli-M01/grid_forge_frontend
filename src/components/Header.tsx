@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Users, Pencil, Flame, Zap, RotateCcw, X } from "lucide-react";
+import { Users, Pencil, Flame, Zap, RotateCcw, X, Menu } from "lucide-react";
 
 interface HeaderProps {
   connected: boolean;
@@ -12,6 +12,7 @@ interface HeaderProps {
   myStreak: number;
   myMultiplier: number;
   onRename: (name: string) => void;
+  onMenuToggle?: () => void;
 }
 
 export default function Header({
@@ -22,6 +23,7 @@ export default function Header({
   myStreak,
   myMultiplier,
   onRename,
+  onMenuToggle,
 }: HeaderProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -120,15 +122,15 @@ export default function Header({
 
   return (
     <>
-      <header className="flex items-center justify-between px-5 py-2.5 bg-gray-900 border-b border-gray-800 shrink-0 z-10">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-900 border-b border-gray-800 shrink-0 z-10 gap-2 md:gap-4">
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Image
             src="/logo.png"
             alt="GridWar logo"
-            width={32}
-            height={32}
-            className="rounded-md"
+            width={28}
+            height={28}
+            className="sm:w-8 sm:h-8 w-7 h-7 rounded-md shrink-0"
             priority
           />
           <Image
@@ -142,59 +144,59 @@ export default function Header({
           />
         </div>
 
-        {/* Center: status indicators */}
-        <div className="flex items-center gap-4 text-sm">
+        {/* Center: status indicators (hidden on very small screens) */}
+        <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap justify-center flex-1">
           {/* Connection status */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                 connected ? "bg-green-400 animate-pulse" : "bg-red-500"
               }`}
             />
-            <span className="text-gray-400">
+            <span className="text-gray-400 hidden sm:inline text-xs">
               {connected ? "Live" : "Reconnecting…"}
             </span>
           </div>
 
           {/* Online count */}
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <Users className="w-4 h-4" />
-            <span>{onlineCount} online</span>
+          <div className="flex items-center gap-1 text-gray-400 shrink-0">
+            <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm">{onlineCount}</span>
           </div>
 
           {/* Streak badge */}
           {myStreak >= 2 && (
             <div
-              className={`flex items-center gap-1 font-semibold ${streakColor}`}
+              className={`flex items-center gap-0.5 sm:gap-1 font-semibold text-xs sm:text-sm shrink-0 ${streakColor}`}
             >
-              <Flame className="w-4 h-4" />
-              <span>{myStreak}x streak</span>
+              <Flame className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span>{myStreak}x</span>
               {myMultiplier > 1 && (
                 <span className="flex items-center gap-0.5 text-xs bg-orange-500/20 border border-orange-500/40 rounded px-1 py-0.5">
-                  <Zap className="w-3 h-3" />
-                  {myMultiplier}× pts
+                  <Zap className="w-2.5 h-2.5" />
+                  {myMultiplier}×
                 </span>
               )}
             </div>
           )}
         </div>
 
-        {/* Right: player identity + reset */}
-        <div className="flex items-center gap-3">
+        {/* Right: player identity + controls */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Reset button */}
           <button
             onClick={openReset}
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border border-gray-700 bg-gray-800 text-gray-400 hover:text-red-400 hover:border-red-500/50 transition-all"
+            className="flex items-center gap-1 text-xs px-2 sm:px-2.5 py-1 rounded-md border border-gray-700 bg-gray-800 text-gray-400 hover:text-red-400 hover:border-red-500/50 transition-all shrink-0"
             title="Reset grid (admin only)"
           >
             <RotateCcw className="w-3 h-3" />
-            <span className="hidden sm:inline">Reset</span>
+            <span className="hidden sm:inline text-xs">Reset</span>
           </button>
 
           {/* Color dot */}
           {myColor && (
             <div
-              className="w-3 h-3 rounded-full ring-2 ring-white/20"
+              className="w-2 h-2 sm:w-3 sm:h-3 rounded-full ring-2 ring-white/20 shrink-0"
               style={{ backgroundColor: myColor }}
             />
           )}
@@ -207,19 +209,28 @@ export default function Header({
               onChange={(e) => setDraft(e.target.value.slice(0, 20))}
               onBlur={commitEdit}
               onKeyDown={handleKey}
-              className="bg-gray-800 text-white text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500 w-36"
+              className="bg-gray-800 text-white text-xs sm:text-sm px-2 py-1 rounded border border-gray-600 focus:outline-none focus:border-blue-500 w-24 sm:w-36 min-w-0"
               maxLength={20}
             />
           ) : (
             <button
               onClick={startEdit}
-              className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-1.5 group"
+              className="text-xs sm:text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-1 group min-w-0"
               title="Click to rename"
             >
-              <span>{myName ?? "…"}</span>
-              <Pencil className="w-3 h-3 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              <span className="truncate">{myName ?? "…"}</span>
+              <Pencil className="w-3 h-3 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
             </button>
           )}
+
+          {/* Mobile sidebar toggle */}
+          <button
+            onClick={onMenuToggle}
+            className="flex md:hidden items-center justify-center w-8 h-8 rounded-md border border-gray-700 bg-gray-800 text-gray-400 hover:text-white transition-all shrink-0"
+            title="Toggle sidebar"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
         </div>
       </header>
 

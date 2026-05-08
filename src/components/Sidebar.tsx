@@ -177,12 +177,12 @@ export default function Sidebar({ leaderboard, userId, grid, cols, rows, activit
   }
 
   return (
-    <aside className="w-64 shrink-0 bg-gray-900 border-l border-gray-800 flex flex-col overflow-hidden select-none">
-      <div className="flex-1 overflow-y-auto">
+    <aside className="w-full md:w-80 shrink-0 bg-gray-900 flex flex-col overflow-hidden select-none">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         {SECTIONS.map((section, idx) => (
           <div key={section.id} className="flex flex-col border-b border-gray-800 last:border-b-0">
-            <div style={{ height: heights[section.id] }} className="overflow-y-auto">
-              <div className="px-3 pt-3 pb-1">
+            <div style={{ height: heights[section.id] }} className="overflow-y-auto scrollbar-hide">
+              <div className="px-2 sm:px-3 pt-2 sm:pt-3 pb-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">
                   {section.label}
                 </p>
