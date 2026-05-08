@@ -23,8 +23,17 @@ body {
 }
 
 html, body {
-  height: 100%;
+  height: 100dvh;
   overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-scalable: no;
+}
+
+/* Safe area support for notched devices */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 @keyframes bounce-in {

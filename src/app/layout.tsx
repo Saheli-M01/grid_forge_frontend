@@ -55,6 +55,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#030712",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -63,9 +68,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-dvh antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-950 text-white">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+      </head>
+      <body className="h-dvh flex flex-col bg-gray-950 text-white overflow-hidden">
         {children}
       </body>
     </html>

@@ -33,13 +33,13 @@ export default function Tooltip({ cell, x, y, isOwn }: TooltipProps) {
   return (
     <div
       className="fixed z-50 pointer-events-none"
-      style={{ left: x + 14, top: y - 10 }}
+      style={{ left: Math.min(x + 14, window.innerWidth - 220), top: Math.min(y - 10, window.innerHeight - 120) }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 shadow-xl text-sm max-w-[200px]">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg px-2 sm:px-3 py-2 shadow-xl text-xs sm:text-sm max-w-xs sm:max-w-[200px]">
         {cell.owner ? (
           <>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cell.color ?? "#888" }} />
+              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0" style={{ backgroundColor: cell.color ?? "#888" }} />
               <span className="font-medium text-white truncate">
                 {cell.name}
                 {isOwn && <span className="text-gray-400 font-normal ml-1">(you)</span>}
